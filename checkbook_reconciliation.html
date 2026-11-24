@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkbook Reconciliation Practice</title>
+<style>
+  :root{--ink:#1d2433;--muted:#5b6475;--line:#d5dae3;--soft:#f4f6f9;--accent:#1f5fae;--good:#1e7a46;--bad:#b3261e;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:#eef1f5;line-height:1.4}
+  .wrap{max-width:980px;margin:0 auto;padding:20px 14px 60px}
+  header h1{margin:0 0 4px;font-size:1.6rem}
+  header p{margin:0;color:var(--muted)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:16px}
+  .namebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .namebar input{flex:1;min-width:200px}
+  .progress{display:flex;gap:6px;margin-top:12px}
+  .dot{flex:1;height:8px;border-radius:4px;background:var(--line)}
+  .dot.done{background:var(--good)} .dot.now{background:var(--accent)}
+  h2{margin:0 0 6px;font-size:1.25rem} h3{margin:18px 0 8px;font-size:1.05rem}
+  .instr{color:var(--muted);margin:0 0 6px}
+  .tbl{width:100%;border-collapse:collapse;font-size:.92rem}
+  .tbl th,.tbl td{border:1px solid var(--line);padding:5px 7px;text-align:left}
+  .tbl th{background:var(--soft);font-weight:600}
+  .tbl td.num,.tbl th.num{text-align:right;white-space:nowrap}
+  .tbl td.ck{text-align:center;width:42px}
+  .tbl input[type=checkbox]{width:20px;height:20px;cursor:pointer}
+  .scroll{overflow-x:auto}
+  .bank{border:2px solid #2b3a55;border-radius:8px;padding:14px}
+  .bankhead{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;border-bottom:2px solid #2b3a55;padding-bottom:6px;margin-bottom:10px}
+  .bankhead b{font-size:1.05rem;letter-spacing:.03em}
+  .bankhead small{color:var(--muted)}
+  .summary{width:auto;min-width:320px;margin-bottom:12px}
+  .ws{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .ws .part{background:#2b3a55;color:#fff;padding:7px 10px;font-weight:600}
+  .row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .row .lbl{flex:1;min-width:180px}
+  .row.sub{padding-left:28px;background:#fafbfc}
+  .row.total{font-weight:600;background:var(--soft)}
+  .row.adj{font-weight:700;background:#e6eefa}
+  .money{display:flex;align-items:center;gap:3px}
+  input[type=text]{font:inherit;padding:6px 8px;border:1px solid #b9c1cd;border-radius:6px}
+  input.amt{width:120px;text-align:right}
+  input.desc{flex:1;min-width:160px}
+  input.chk{width:80px}
+  select{font:inherit;padding:6px;border-radius:6px;border:1px solid #b9c1cd}
+  .btns{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center}
+  button{font:inherit;font-weight:600;padding:10px 18px;border-radius:8px;border:0;cursor:pointer;background:var(--accent);color:#fff}
+  button.secondary{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .msg{margin-top:12px;padding:10px 12px;border-radius:8px;display:none;font-weight:600}
+  .msg.bad{display:block;background:#fdecea;color:var(--bad);border:1px solid #f3c0bb}
+  .msg.good{display:block;background:#e7f5ec;color:var(--good);border:1px solid #b6e0c4}
+  .hidden{display:none}
+  .finish{text-align:center;padding:30px 10px}
+  .finish h2{font-size:1.6rem}
+  @media print{body{background:#fff}.btns,.progress{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Checkbook Reconciliation Practice</h1>
+    <p>5 problems. Complete each one correctly to unlock the next.</p>
+  </header>
+
+  <div class="card">
+    <div class="namebar">
+      <label for="studentName"><b>Your name:</b></label>
+      <input type="text" id="studentName" placeholder="First and last name" autocomplete="off">
+    </div>
+    <div class="progress" id="progress"></div>
+  </div>
+
+  <div id="problemArea"></div>
+
+  <div class="card finish hidden" id="finish">
+    <h2>🎉 All 5 problems complete!</h2>
+    <p id="finishText"></p>
+    <button class="secondary" onclick="restart()">Start over</button>
+  </div>
+</div>
+
+<script>
+const PROBLEMS = [{"name": "Jordan Ellis", "month": "February", "acct": "xxxx-3517", "m": "02", "begin": 1245.6, "reg": [{"date": "02/01", "no": "4101", "desc": "Oakview Apartments (rent)", "amt": 650.0, "k": "d", "bal": 595.6}, {"date": "02/02", "no": "DC", "desc": "Debit card: Sunrise Bakery", "amt": 12.75, "k": "d", "bal": 582.85}, {"date": "02/04", "no": "DEP", "desc": "Paycheck deposit", "amt": 842.3, "k": "c", "bal": 1425.15}, {"date": "02/07", "no": "4102", "desc": "City Water Company", "amt": 38.6, "k": "d", "bal": 1386.55}, {"date": "02/09", "no": "ATM", "desc": "ATM cash withdrawal", "amt": 60.0, "k": "d", "bal": 1326.55}, {"date": "02/11", "no": "4103", "desc": "FreshMart Grocery", "amt": 87.45, "k": "d", "bal": 1239.1}, {"date": "02/15", "no": "DC", "desc": "Debit card: Fuel Stop", "amt": 34.8, "k": "d", "bal": 1204.3}, {"date": "02/18", "no": "DEP", "desc": "Paycheck deposit", "amt": 842.3, "k": "c", "bal": 2046.6}, {"date": "02/21", "no": "4104", "desc": "Metro Phone Service", "amt": 55.0, "k": "d", "bal": 1991.6}, {"date": "02/25", "no": "4105", "desc": "Lakeside Vet Clinic", "amt": 72.5, "k": "d", "bal": 1919.1}, {"date": "02/26", "no": "DEP", "desc": "Birthday money deposit", "amt": 100.0, "k": "c", "bal": 2019.1}, {"date": "02/27", "no": "4106", "desc": "Pizza Palace", "amt": 24.9, "k": "d", "bal": 1994.2}], "st": [{"date": "02/02", "desc": "Debit card purchase: Sunrise Bakery", "amt": 12.75, "k": "d"}, {"date": "02/03", "desc": "Check #4101", "amt": 650.0, "k": "d"}, {"date": "02/04", "desc": "Deposit", "amt": 842.3, "k": "c"}, {"date": "02/09", "desc": "ATM withdrawal", "amt": 60.0, "k": "d"}, {"date": "02/10", "desc": "Check #4102", "amt": 38.6, "k": "d"}, {"date": "02/14", "desc": "Check #4103", "amt": 87.45, "k": "d"}, {"date": "02/16", "desc": "Debit card purchase: Fuel Stop", "amt": 34.8, "k": "d"}, {"date": "02/18", "desc": "Deposit", "amt": 842.3, "k": "c"}, {"date": "02/24", "desc": "Check #4104", "amt": 55.0, "k": "d"}, {"date": "02/28", "desc": "Monthly service fee", "amt": 6.0, "k": "d"}, {"date": "02/28", "desc": "Interest earned", "amt": 0.52, "k": "c"}], "dep": 1685.12, "wd": 944.6, "end": 1986.12}, {"name": "Priya Patel", "month": "March", "acct": "xxxx-8842", "m": "03", "begin": 2310.45, "reg": [{"date": "03/01", "no": "2201", "desc": "Hillside Rentals (rent)", "amt": 925.0, "k": "d", "bal": 1385.45}, {"date": "03/03", "no": "DC", "desc": "Debit card: Bean There Coffee", "amt": 6.85, "k": "d", "bal": 1378.6}, {"date": "03/05", "no": "DEP", "desc": "Paycheck deposit", "amt": 1124.8, "k": "c", "bal": 2503.4}, {"date": "03/06", "no": "2202", "desc": "State Gas & Power", "amt": 88.2, "k": "d", "bal": 2415.2}, {"date": "03/08", "no": "DC", "desc": "Debit card: Page Turner Books", "amt": 29.99, "k": "d", "bal": 2385.21}, {"date": "03/10", "no": "2203", "desc": "Valley Market", "amt": 132.65, "k": "d", "bal": 2252.56}, {"date": "03/12", "no": "ATM", "desc": "ATM cash withdrawal", "amt": 100.0, "k": "d", "bal": 2152.56}, {"date": "03/16", "no": "2204", "desc": "Northside Pediatrics", "amt": 45.0, "k": "d", "bal": 2107.56}, {"date": "03/19", "no": "DEP", "desc": "Paycheck deposit", "amt": 1124.8, "k": "c", "bal": 3232.36}, {"date": "03/22", "no": "2205", "desc": "Allstar Car Insurance", "amt": 146.3, "k": "d", "bal": 3086.06}, {"date": "03/24", "no": "DC", "desc": "Debit card: Green Leaf Salads", "amt": 14.25, "k": "d", "bal": 3071.81}, {"date": "03/26", "no": "2206", "desc": "Bright Smile Dental", "amt": 110.0, "k": "d", "bal": 2961.81}, {"date": "03/28", "no": "2207", "desc": "Comet Internet", "amt": 64.99, "k": "d", "bal": 2896.82}, {"date": "03/30", "no": "2208", "desc": "Tumble Kids Gym", "amt": 38.0, "k": "d", "bal": 2858.82}, {"date": "03/30", "no": "DEP", "desc": "Refund deposit", "amt": 75.4, "k": "c", "bal": 2934.22}], "st": [{"date": "03/03", "desc": "Check #2201", "amt": 925.0, "k": "d"}, {"date": "03/03", "desc": "Debit card purchase: Bean There Coffee", "amt": 6.85, "k": "d"}, {"date": "03/05", "desc": "Deposit", "amt": 1124.8, "k": "c"}, {"date": "03/09", "desc": "Check #2202", "amt": 88.2, "k": "d"}, {"date": "03/09", "desc": "Debit card purchase: Page Turner Books", "amt": 29.99, "k": "d"}, {"date": "03/12", "desc": "ATM withdrawal", "amt": 100.0, "k": "d"}, {"date": "03/13", "desc": "Check #2203", "amt": 132.65, "k": "d"}, {"date": "03/14", "desc": "Automatic payment: StreamFlix", "amt": 15.49, "k": "d"}, {"date": "03/19", "desc": "Deposit", "amt": 1124.8, "k": "c"}, {"date": "03/20", "desc": "Check #2204", "amt": 45.0, "k": "d"}, {"date": "03/24", "desc": "Debit card purchase: Green Leaf Salads", "amt": 14.25, "k": "d"}, {"date": "03/25", "desc": "Check #2205", "amt": 146.3, "k": "d"}, {"date": "03/27", "desc": "Direct deposit: State tax refund", "amt": 212.0, "k": "c"}, {"date": "03/31", "desc": "Monthly service fee", "amt": 5.0, "k": "d"}, {"date": "03/31", "desc": "Interest earned", "amt": 1.12, "k": "c"}], "dep": 2462.72, "wd": 1508.73, "end": 3264.44}, {"name": "Marcus Bell", "month": "April", "acct": "xxxx-1093", "m": "04", "begin": 987.35, "reg": [{"date": "04/01", "no": "1501", "desc": "Parkside Lofts (rent)", "amt": 540.0, "k": "d", "bal": 447.35}, {"date": "04/02", "no": "DEP", "desc": "Paycheck deposit", "amt": 698.4, "k": "c", "bal": 1145.75}, {"date": "04/04", "no": "DC", "desc": "Debit card: Taco Town", "amt": 11.6, "k": "d", "bal": 1134.15}, {"date": "04/06", "no": "1502", "desc": "County Electric Co-op", "amt": 57.85, "k": "d", "bal": 1076.3}, {"date": "04/08", "no": "ATM", "desc": "ATM cash withdrawal", "amt": 40.0, "k": "d", "bal": 1036.3}, {"date": "04/11", "no": "1503", "desc": "Corner Market", "amt": 63.2, "k": "d", "bal": 973.1}, {"date": "04/14", "no": "DC", "desc": "Debit card: QuickLube Auto", "amt": 44.99, "k": "d", "bal": 928.11}, {"date": "04/16", "no": "DEP", "desc": "Paycheck deposit", "amt": 698.4, "k": "c", "bal": 1626.51}, {"date": "04/19", "no": "1504", "desc": "Westside Music Lessons", "amt": 80.0, "k": "d", "bal": 1546.51}, {"date": "04/23", "no": "1505", "desc": "Hometown Hardware", "amt": 26.45, "k": "d", "bal": 1520.06}, {"date": "04/27", "no": "DEP", "desc": "Sold old bike (deposit)", "amt": 120.0, "k": "c", "bal": 1640.06}, {"date": "04/29", "no": "1506", "desc": "Cityline Bus Pass", "amt": 52.0, "k": "d", "bal": 1588.06}, {"date": "04/30", "no": "DEP", "desc": "Paycheck deposit", "amt": 698.4, "k": "c", "bal": 2286.46}], "st": [{"date": "04/02", "desc": "Check #1501", "amt": 540.0, "k": "d"}, {"date": "04/02", "desc": "Deposit", "amt": 698.4, "k": "c"}, {"date": "04/04", "desc": "Debit card purchase: Taco Town", "amt": 11.6, "k": "d"}, {"date": "04/08", "desc": "ATM withdrawal", "amt": 40.0, "k": "d"}, {"date": "04/08", "desc": "ATM fee", "amt": 2.5, "k": "d"}, {"date": "04/09", "desc": "Check #1502", "amt": 57.85, "k": "d"}, {"date": "04/15", "desc": "Check #1503", "amt": 63.2, "k": "d"}, {"date": "04/15", "desc": "Debit card purchase: QuickLube Auto", "amt": 44.99, "k": "d"}, {"date": "04/16", "desc": "Deposit", "amt": 698.4, "k": "c"}, {"date": "04/20", "desc": "Check printing charge", "amt": 18.5, "k": "d"}, {"date": "04/23", "desc": "Check #1504", "amt": 80.0, "k": "d"}, {"date": "04/30", "desc": "Interest earned", "amt": 0.41, "k": "c"}], "dep": 1397.21, "wd": 858.64, "end": 1525.92}, {"name": "Sofia Ramirez", "month": "May", "acct": "xxxx-6620", "m": "05", "begin": 1876.1, "reg": [{"date": "05/01", "no": "3301", "desc": "Brookfield Apartments (rent)", "amt": 815.0, "k": "d", "bal": 1061.1}, {"date": "05/02", "no": "DC", "desc": "Debit card: Daily Grind Cafe", "amt": 8.4, "k": "d", "bal": 1052.7}, {"date": "05/03", "no": "DEP", "desc": "Paycheck deposit", "amt": 956.25, "k": "c", "bal": 2008.95}, {"date": "05/05", "no": "3302", "desc": "Riverbend Water & Sewer", "amt": 42.15, "k": "d", "bal": 1966.8}, {"date": "05/07", "no": "ATM", "desc": "ATM cash withdrawal", "amt": 80.0, "k": "d", "bal": 1886.8}, {"date": "05/09", "no": "3303", "desc": "Harvest Foods", "amt": 118.7, "k": "d", "bal": 1768.1}, {"date": "05/12", "no": "DC", "desc": "Debit card: Speedy Gas", "amt": 39.6, "k": "d", "bal": 1728.5}, {"date": "05/14", "no": "3304", "desc": "Little Sprouts Daycare", "amt": 175.0, "k": "d", "bal": 1553.5}, {"date": "05/17", "no": "DEP", "desc": "Paycheck deposit", "amt": 956.25, "k": "c", "bal": 2509.75}, {"date": "05/20", "no": "3305", "desc": "Summit Health Insurance", "amt": 210.4, "k": "d", "bal": 2299.35}, {"date": "05/22", "no": "DC", "desc": "Debit card: Flower Shoppe", "amt": 27.5, "k": "d", "bal": 2271.85}, {"date": "05/24", "no": "3306", "desc": "Eastgate Pharmacy", "amt": 18.35, "k": "d", "bal": 2253.5}, {"date": "05/26", "no": "3307", "desc": "Kwik Dry Cleaners", "amt": 31.0, "k": "d", "bal": 2222.5}, {"date": "05/28", "no": "3308", "desc": "Lincoln PTA Fundraiser", "amt": 25.0, "k": "d", "bal": 2197.5}, {"date": "05/30", "no": "3309", "desc": "Pine Valley Fitness", "amt": 49.99, "k": "d", "bal": 2147.51}, {"date": "05/31", "no": "DEP", "desc": "Gift deposit", "amt": 60.0, "k": "c", "bal": 2207.51}], "st": [{"date": "05/02", "desc": "Debit card purchase: Daily Grind Cafe", "amt": 8.4, "k": "d"}, {"date": "05/03", "desc": "Check #3301", "amt": 815.0, "k": "d"}, {"date": "05/03", "desc": "Deposit", "amt": 956.25, "k": "c"}, {"date": "05/07", "desc": "ATM withdrawal", "amt": 80.0, "k": "d"}, {"date": "05/08", "desc": "Check #3302", "amt": 42.15, "k": "d"}, {"date": "05/12", "desc": "Check #3303", "amt": 118.7, "k": "d"}, {"date": "05/13", "desc": "Debit card purchase: Speedy Gas", "amt": 39.6, "k": "d"}, {"date": "05/15", "desc": "Automatic payment: Wave Mobile", "amt": 54.99, "k": "d"}, {"date": "05/17", "desc": "Check #3304", "amt": 175.0, "k": "d"}, {"date": "05/17", "desc": "Deposit", "amt": 956.25, "k": "c"}, {"date": "05/21", "desc": "Cashback reward", "amt": 10.0, "k": "c"}, {"date": "05/22", "desc": "Debit card purchase: Flower Shoppe", "amt": 27.5, "k": "d"}, {"date": "05/23", "desc": "Check #3305", "amt": 210.4, "k": "d"}, {"date": "05/31", "desc": "Monthly service fee", "amt": 4.0, "k": "d"}, {"date": "05/31", "desc": "Interest earned", "amt": 0.37, "k": "c"}], "dep": 1922.87, "wd": 1575.74, "end": 2223.23}, {"name": "Daniel Kim", "month": "June", "acct": "xxxx-4458", "m": "06", "begin": 3104.85, "reg": [{"date": "06/01", "no": "5701", "desc": "Summit Towers (rent)", "amt": 1150.0, "k": "d", "bal": 1954.85}, {"date": "06/02", "no": "DEP", "desc": "Paycheck deposit", "amt": 1386.9, "k": "c", "bal": 3341.75}, {"date": "06/03", "no": "DC", "desc": "Debit card: Noodle House", "amt": 17.65, "k": "d", "bal": 3324.1}, {"date": "06/05", "no": "5702", "desc": "Metro Power & Light", "amt": 94.3, "k": "d", "bal": 3229.8}, {"date": "06/07", "no": "5703", "desc": "Super Saver Grocery", "amt": 156.85, "k": "d", "bal": 3072.95}, {"date": "06/09", "no": "ATM", "desc": "ATM cash withdrawal", "amt": 120.0, "k": "d", "bal": 2952.95}, {"date": "06/11", "no": "DC", "desc": "Debit card: Gas-N-Go", "amt": 48.2, "k": "d", "bal": 2904.75}, {"date": "06/13", "no": "5704", "desc": "Ridgeway Auto Repair", "amt": 312.6, "k": "d", "bal": 2592.15}, {"date": "06/16", "no": "DEP", "desc": "Paycheck deposit", "amt": 1386.9, "k": "c", "bal": 3979.05}, {"date": "06/18", "no": "5705", "desc": "Clearview Eye Care", "amt": 65.0, "k": "d", "bal": 3914.05}, {"date": "06/20", "no": "DC", "desc": "Debit card: Cinema 12", "amt": 22.5, "k": "d", "bal": 3891.55}, {"date": "06/23", "no": "5706", "desc": "Heritage Student Loans", "amt": 185.75, "k": "d", "bal": 3705.8}, {"date": "06/25", "no": "5707", "desc": "Maple Grove Landscaping", "amt": 70.0, "k": "d", "bal": 3635.8}, {"date": "06/27", "no": "5708", "desc": "Happy Paws Grooming", "amt": 42.0, "k": "d", "bal": 3593.8}, {"date": "06/28", "no": "DEP", "desc": "Side job deposit", "amt": 250.0, "k": "c", "bal": 3843.8}, {"date": "06/29", "no": "5709", "desc": "Lakeview Swim Club", "amt": 88.0, "k": "d", "bal": 3755.8}, {"date": "06/30", "no": "DEP", "desc": "Refund deposit", "amt": 36.8, "k": "c", "bal": 3792.6}], "st": [{"date": "06/02", "desc": "Check #5701", "amt": 1150.0, "k": "d"}, {"date": "06/02", "desc": "Deposit", "amt": 1386.9, "k": "c"}, {"date": "06/03", "desc": "Debit card purchase: Noodle House", "amt": 17.65, "k": "d"}, {"date": "06/08", "desc": "Check #5702", "amt": 94.3, "k": "d"}, {"date": "06/09", "desc": "ATM withdrawal", "amt": 120.0, "k": "d"}, {"date": "06/10", "desc": "Check #5703", "amt": 156.85, "k": "d"}, {"date": "06/12", "desc": "Debit card purchase: Gas-N-Go", "amt": 48.2, "k": "d"}, {"date": "06/12", "desc": "Automatic payment: CloudSafe Backup", "amt": 11.99, "k": "d"}, {"date": "06/16", "desc": "Deposit", "amt": 1386.9, "k": "c"}, {"date": "06/17", "desc": "Check #5704", "amt": 312.6, "k": "d"}, {"date": "06/19", "desc": "Returned item fee", "amt": 25.0, "k": "d"}, {"date": "06/21", "desc": "Debit card purchase: Cinema 12", "amt": 22.5, "k": "d"}, {"date": "06/22", "desc": "Check #5705", "amt": 65.0, "k": "d"}, {"date": "06/24", "desc": "Direct deposit: Insurance rebate", "amt": 48.25, "k": "c"}, {"date": "06/26", "desc": "Check #5706", "amt": 185.75, "k": "d"}, {"date": "06/30", "desc": "Monthly service fee", "amt": 7.0, "k": "d"}, {"date": "06/30", "desc": "Interest earned", "amt": 1.64, "k": "c"}], "dep": 2823.69, "wd": 2216.84, "end": 3711.7}];
+const KEY = "W3siY2xlYXJlZCI6IFswLCAxLCAyLCAzLCA0LCA1LCA2LCA3LCA4XSwgImJhbmtFbmQiOiAxOTg2LjEyLCAiZGl0IjogWzEwMC4wXSwgImRpdFQiOiAxMDAuMCwgIm9zIjogW1siNDEwNSIsIDcyLjVdLCBbIjQxMDYiLCAyNC45XV0sICJvc1QiOiA5Ny40LCAiYWRqQiI6IDE5ODguNzIsICJyZWdFbmQiOiAxOTk0LjIsICJjciI6IFswLjUyXSwgImNoIjogWzYuMF0sICJhZGpSIjogMTk4OC43Mn0sIHsiY2xlYXJlZCI6IFswLCAxLCAyLCAzLCA0LCA1LCA2LCA3LCA4LCA5LCAxMF0sICJiYW5rRW5kIjogMzI2NC40NCwgImRpdCI6IFs3NS40XSwgImRpdFQiOiA3NS40LCAib3MiOiBbWyIyMjA2IiwgMTEwLjBdLCBbIjIyMDciLCA2NC45OV0sIFsiMjIwOCIsIDM4LjBdXSwgIm9zVCI6IDIxMi45OSwgImFkakIiOiAzMTI2Ljg1LCAicmVnRW5kIjogMjkzNC4yMiwgImNyIjogWzIxMi4wLCAxLjEyXSwgImNoIjogWzE1LjQ5LCA1LjBdLCAiYWRqUiI6IDMxMjYuODV9LCB7ImNsZWFyZWQiOiBbMCwgMSwgMiwgMywgNCwgNSwgNiwgNywgOF0sICJiYW5rRW5kIjogMTUyNS45MiwgImRpdCI6IFsxMjAuMCwgNjk4LjRdLCAiZGl0VCI6IDgxOC40LCAib3MiOiBbWyIxNTA1IiwgMjYuNDVdLCBbIjE1MDYiLCA1Mi4wXV0sICJvc1QiOiA3OC40NSwgImFkakIiOiAyMjY1Ljg3LCAicmVnRW5kIjogMjI4Ni40NiwgImNyIjogWzAuNDFdLCAiY2giOiBbMi41LCAxOC41XSwgImFkalIiOiAyMjY1Ljg3fSwgeyJjbGVhcmVkIjogWzAsIDEsIDIsIDMsIDQsIDUsIDYsIDcsIDgsIDksIDEwXSwgImJhbmtFbmQiOiAyMjIzLjIzLCAiZGl0IjogWzYwLjBdLCAiZGl0VCI6IDYwLjAsICJvcyI6IFtbIjMzMDYiLCAxOC4zNV0sIFsiMzMwNyIsIDMxLjBdLCBbIjMzMDgiLCAyNS4wXSwgWyIzMzA5IiwgNDkuOTldXSwgIm9zVCI6IDEyNC4zNCwgImFkakIiOiAyMTU4Ljg5LCAicmVnRW5kIjogMjIwNy41MSwgImNyIjogWzEwLjAsIDAuMzddLCAiY2giOiBbNTQuOTksIDQuMF0sICJhZGpSIjogMjE1OC44OX0sIHsiY2xlYXJlZCI6IFswLCAxLCAyLCAzLCA0LCA1LCA2LCA3LCA4LCA5LCAxMCwgMTFdLCAiYmFua0VuZCI6IDM3MTEuNywgImRpdCI6IFsyNTAuMCwgMzYuOF0sICJkaXRUIjogMjg2LjgsICJvcyI6IFtbIjU3MDciLCA3MC4wXSwgWyI1NzA4IiwgNDIuMF0sIFsiNTcwOSIsIDg4LjBdXSwgIm9zVCI6IDIwMC4wLCAiYWRqQiI6IDM3OTguNSwgInJlZ0VuZCI6IDM3OTIuNiwgImNyIjogWzQ4LjI1LCAxLjY0XSwgImNoIjogWzExLjk5LCAyNS4wLCA3LjBdLCAiYWRqUiI6IDM3OTguNX1d";
+const ANS = JSON.parse(atob(KEY));
+const SLOTS = {dit:3, os:4, cr:3, ch:4};
+const STORE = "checkbookRecon_v1";
+
+let state = {current:0, tries:[0,0,0,0,0], name:""};
+try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && typeof s.current==="number") state = s; } catch(e){}
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify(state)); }catch(e){} }
+
+const nameBox = document.getElementById("studentName");
+nameBox.value = state.name || "";
+nameBox.addEventListener("input", ()=>{ state.name = nameBox.value; save(); });
+
+const $ = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>[...el.querySelectorAll(s)];
+const fmt = n => "$" + n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+
+// Lenient number reading: ignores $, commas, spaces, minus signs, parentheses.
+function num(v){
+  if (v==null) return null;
+  const t = String(v).replace(/[\s$,()+\-]/g,"");
+  if (t==="") return null;
+  if (!/^\d*\.?\d*$/.test(t) || t===".") return NaN;
+  return parseFloat(t);
+}
+function checkNo(v){ const t=String(v||"").replace(/\D/g,""); return t===""?null:t; }
+const same = (a,b)=> a!=null && !isNaN(a) && Math.abs(a-b) < 0.005;
+
+function sameMoneyList(entered, expected){
+  const e = entered.slice(), x = expected.slice();
+  if (e.some(v=>isNaN(v))) return false;
+  if (e.length !== x.length) return false;
+  for (const v of x){ const i = e.findIndex(w=>same(w,v)); if (i<0) return false; e.splice(i,1); }
+  return true;
+}
+
+function renderProgress(){
+  const p = $("#progress"); p.innerHTML = "";
+  for (let i=0;i<5;i++){
+    const d=document.createElement("div");
+    d.className="dot"+(i<state.current?" done":i===state.current?" now":"");
+    p.appendChild(d);
+  }
+}
+
+function lines(kind, n, withCheck){
+  let h="";
+  for (let i=0;i<n;i++){
+    h += `<div class="row sub">${withCheck?`<span>Check #</span><input type="text" class="chk" data-f="${kind}No" inputmode="numeric">`:""}
+      <input type="text" class="desc" data-f="${kind}Desc" placeholder="Description">
+      <span class="money">$<input type="text" class="amt" data-f="${kind}" inputmode="decimal"></span></div>`;
+  }
+  return h;
+}
+function money(f, label, cls="row"){
+  return `<div class="${cls}"><span class="lbl">${label}</span><span class="money">$<input type="text" class="amt" data-f="${f}" inputmode="decimal"></span></div>`;
+}
+
+function renderProblem(){
+  renderProgress();
+  const area = $("#problemArea");
+  if (state.current >= 5){ area.innerHTML=""; showFinish(); return; }
+  $("#finish").classList.add("hidden");
+  const P = PROBLEMS[state.current];
+  const regRows = P.reg.map((r,i)=>`<tr>
+      <td class="ck"><input type="checkbox" data-reg="${i}" aria-label="Cleared"></td>
+      <td>${r.date}</td><td>${r.no}</td><td>${r.desc}</td>
+      <td class="num">${r.k==='d'?fmt(r.amt):""}</td>
+      <td class="num">${r.k==='c'?fmt(r.amt):""}</td>
+      <td class="num">${fmt(r.bal)}</td></tr>`).join("");
+  const stRows = P.st.map(s=>`<tr><td>${s.date}</td><td>${s.desc}</td>
+      <td class="num">${s.k==='d'?fmt(s.amt):""}</td><td class="num">${s.k==='c'?fmt(s.amt):""}</td></tr>`).join("");
+  const first = P.name.split(" ")[0];
+
+  area.innerHTML = `
+  <div class="card">
+    <h2>Problem ${state.current+1} of 5</h2>
+    <p class="instr">${P.name} kept this check register for ${P.month}. The bank statement is below it.
+    Put a ✓ in the register next to each transaction that appears on the statement. Then complete the reconciliation worksheet.</p>
+
+    <h3>${first}'s Check Register</h3>
+    <div class="scroll"><table class="tbl">
+      <thead><tr><th class="ck">✓</th><th>Date</th><th>No.</th><th>Description</th>
+      <th class="num">Payment / Debit (−)</th><th class="num">Deposit / Credit (+)</th><th class="num">Balance</th></tr></thead>
+      <tbody><tr><td></td><td>${P.m}/01</td><td></td><td>Beginning balance</td><td></td><td></td><td class="num">${fmt(P.begin)}</td></tr>
+      ${regRows}</tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="bank">
+      <div class="bankhead"><div><b>RIVERSIDE COMMUNITY BANK</b><br><small>Sample statement for classroom use only. Not a real bank or account.</small></div>
+      <div style="text-align:right">Checking Account Statement<br><small>Statement period: ${P.m}/01 – ${P.reg[P.reg.length-1].date.slice(0,2)}/${P.st[P.st.length-1].date.slice(3)} · Account: ${P.acct}</small></div></div>
+      <p style="margin:0 0 8px">Account holder: <b>${P.name}</b></p>
+      <table class="tbl summary">
+        <tr><td>Beginning balance (${P.m}/01)</td><td class="num">${fmt(P.begin)}</td></tr>
+        <tr><td>Total deposits and credits</td><td class="num">${fmt(P.dep)}</td></tr>
+        <tr><td>Total withdrawals and debits</td><td class="num">${fmt(P.wd)}</td></tr>
+        <tr><th>Ending balance (${P.st[P.st.length-1].date})</th><th class="num">${fmt(P.end)}</th></tr>
+      </table>
+      <div class="scroll"><table class="tbl">
+        <thead><tr><th>Date posted</th><th>Description</th><th class="num">Withdrawals / Debits</th><th class="num">Deposits / Credits</th></tr></thead>
+        <tbody>${stRows}</tbody></table></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Reconciliation Worksheet</h3>
+    <p class="instr">Leave extra lines blank if you don't need them. You can type amounts with or without $ and commas.</p>
+    <div class="ws">
+      <div class="part">PART 1: BANK SIDE</div>
+      ${money("bankEnd","Ending balance on the bank statement")}
+      <div class="row"><span class="lbl"><b>ADD</b> deposits in transit:</span></div>
+      ${lines("dit",SLOTS.dit,false)}
+      ${money("ditT","Total deposits in transit","row total")}
+      <div class="row"><span class="lbl"><b>SUBTRACT</b> outstanding checks:</span></div>
+      ${lines("os",SLOTS.os,true)}
+      ${money("osT","Total outstanding checks","row total")}
+      ${money("adjB","ADJUSTED BANK BALANCE","row adj")}
+
+      <div class="part">PART 2: REGISTER SIDE</div>
+      ${money("regEnd","Ending balance in your check register")}
+      <div class="row"><span class="lbl"><b>ADD</b> credits on the statement that are not in your register:</span></div>
+      ${lines("cr",SLOTS.cr,false)}
+      <div class="row"><span class="lbl"><b>SUBTRACT</b> charges on the statement that are not in your register:</span></div>
+      ${lines("ch",SLOTS.ch,false)}
+      ${money("adjR","ADJUSTED REGISTER BALANCE","row adj")}
+
+      <div class="part">PART 3: DO THEY MATCH?</div>
+      <div class="row"><span class="lbl">Are the two adjusted balances equal?</span>
+        <select data-f="match"><option value="">Choose…</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+    </div>
+    <div class="btns">
+      <button id="checkBtn" onclick="check()">Check my answers</button>
+      <button id="nextBtn" class="hidden" onclick="next()">Next problem →</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>`;
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function vals(f){ return $$(`[data-f="${f}"]`).map(e=>e.value); }
+function one(f){ return num(vals(f)[0]); }
+
+function check(){
+  const A = ANS[state.current];
+  state.tries[state.current]++; save();
+  let ok = true;
+
+  // Check marks
+  const checked = $$("[data-reg]").filter(c=>c.checked).map(c=>+c.dataset.reg).sort((a,b)=>a-b);
+  if (checked.join(",") !== A.cleared.join(",")) ok = false;
+
+  // Single boxes
+  for (const f of ["bankEnd","ditT","osT","adjB","regEnd","adjR"]) if (!same(one(f), A[f])) ok = false;
+
+  // Line-item lists (any order, blanks ignored)
+  const listOf = f => vals(f).map(num).filter(v=>v!==null);
+  if (!sameMoneyList(listOf("dit"), A.dit)) ok = false;
+  if (!sameMoneyList(listOf("cr"), A.cr)) ok = false;
+  if (!sameMoneyList(listOf("ch"), A.ch)) ok = false;
+
+  // Outstanding checks: number + amount pairs, any order
+  const nos = vals("osNo"), amts = vals("os");
+  const pairs = [];
+  for (let i=0;i<nos.length;i++){
+    const n = checkNo(nos[i]), a = num(amts[i]);
+    if (n===null && a===null) continue;
+    pairs.push([n,a]);
+  }
+  if (pairs.length !== A.os.length) ok = false;
+  else {
+    const left = A.os.slice();
+    for (const [n,a] of pairs){
+      const i = left.findIndex(([en,ea])=> en===n && same(a,ea));
+      if (i<0){ ok=false; break; } left.splice(i,1);
+    }
+  }
+
+  if ($('[data-f="match"]').value !== "yes") ok = false;
+
+  const msg = $("#msg");
+  if (ok){
+    msg.className = "msg good";
+    msg.textContent = "✅ Correct! Your reconciliation balances.";
+    $("#checkBtn").disabled = true;
+    $$("input,select", $("#problemArea")).forEach(e=>e.disabled=true);
+    const nb = $("#nextBtn"); nb.classList.remove("hidden");
+    nb.textContent = state.current===4 ? "Finish →" : "Next problem →";
+  } else {
+    msg.className = "msg bad";
+    msg.textContent = "❌ Not quite. Something doesn't match yet. Look over your work and try again.";
+  }
+}
+
+function next(){ state.current++; save(); renderProblem(); }
+
+function showFinish(){
+  const f = $("#finish"); f.classList.remove("hidden");
+  const total = state.tries.reduce((a,b)=>a+b,0);
+  const who = (state.name||"").trim();
+  $("#finishText").textContent = (who? who+", you" : "You") +
+    ` reconciled all 5 checkbooks. Total checks used: ${total} (` +
+    state.tries.map((t,i)=>`P${i+1}: ${t}`).join(", ") + ").";
+}
+function restart(){
+  if (!window.confirmRestart){ window.confirmRestart = true; $("#finishText").textContent += " Click again to confirm starting over."; return; }
+  window.confirmRestart = false;
+  state = {current:0, tries:[0,0,0,0,0], name:state.name}; save(); renderProblem();
+}
+
+renderProblem();
+</script>
+</body>
+</html>
