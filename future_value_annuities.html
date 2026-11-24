@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Future Value of Annuities</title>
+<style>
+:root{--bg:#f3f6fb;--surface:#fff;--ink:#14213d;--muted:#5a6688;--line:#d8dfee;--accent:#2457c5;--accent-soft:#e3ebfb;--accent-ink:#fff;--good:#1b7a45;--good-soft:#def3e6;--bad:#b3261e;--bad-soft:#fbe5e3;--warn:#9a5b00;--warn-soft:#fbecd2;--font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1526;--surface:#161e33;--ink:#e8edf9;--muted:#9aa7c7;--line:#2a3556;--accent:#7ea6ff;--accent-soft:#1f2e55;--accent-ink:#0e1526;--good:#5fd38d;--good-soft:#15352a;--bad:#ff8a80;--bad-soft:#3d1f22;--warn:#f0b45a;--warn-soft:#3b2e14;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font);padding:20px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
+.shell{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2{margin:0}
+.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px 24px}
+.top h1{font-size:clamp(1.5rem,2.4vw + 1rem,2.1rem);line-height:1.1}
+.top p{margin:4px 0 0;color:var(--muted)}
+.stats{display:flex;flex-wrap:wrap;gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 12px;min-width:88px}
+.stat b{display:block;font-size:1.2rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.who{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 16px}
+.who label{font-weight:600}
+.who input{font:500 1rem var(--font);padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);flex:1 1 180px;max-width:280px;min-width:0}
+.sync{color:var(--muted);font-size:.85rem}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab{font:600 .95rem var(--font);padding:8px 16px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;min-height:40px}
+.tab.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.tab.done{border-color:var(--good);color:var(--good)}
+.tab.warn{border-color:var(--warn);color:var(--warn)}
+.tab:disabled{opacity:.45;cursor:default}
+.qnum{font-weight:700;font-size:1.1rem}
+.prompt{font-size:1.1rem;margin:8px 0 6px}
+details{margin:8px 0 4px;font-size:.9rem;color:var(--muted)}
+summary{cursor:pointer;font-weight:600;color:var(--ink)}
+details p{margin:6px 0}
+.row{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-top:1px solid var(--line)}
+.row.off{opacity:.45}
+.row label{font-size:1rem}
+.inrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.inrow input{flex:1 1 220px;min-width:0;font:600 1.1rem var(--font);padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.inrow input:focus{border-color:var(--accent);outline:none}
+.pre{color:var(--muted);font-weight:700}
+.val{font-weight:700;font-size:1.05rem;color:var(--good);background:var(--good-soft);border-radius:10px;padding:8px 12px;overflow-wrap:anywhere}
+.val.no{color:var(--bad);background:var(--bad-soft)}
+.fb{border-radius:10px;padding:9px 13px;font-size:.93rem;border:1px solid}
+.fb.bad{background:var(--bad-soft);border-color:var(--bad)}
+.fb.good{background:var(--good-soft);border-color:var(--good)}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:10px 20px;font:600 1rem var(--font);cursor:pointer;min-height:46px}
+.btn:disabled{opacity:.6;cursor:default}
+.btn:focus-visible,.tab:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.done{display:flex;flex-direction:column;gap:10px;align-items:flex-start;border-top:1px solid var(--line);padding-top:12px}
+.cap{font-size:.88rem;color:var(--muted);margin:10px 0 0}
+.graph{display:block;width:100%;max-width:560px;margin:6px auto 4px;background:var(--bg);border:1px solid var(--line);border-radius:10px}
+.graph .gl{stroke:var(--line);stroke-width:1}
+.graph .gl.minor{stroke-dasharray:2 3;opacity:.7}
+.graph .ax{stroke:var(--muted);stroke-width:1.6}
+.graph text{fill:var(--muted);font:600 14px var(--font)}
+.graph .curve{fill:none;stroke:var(--accent);stroke-width:3;stroke-linejoin:round}
+.graph .mark{stroke:var(--bad);stroke-width:2;stroke-dasharray:6 4}
+.graph text.mk{fill:var(--bad);font:700 14px var(--font)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <a href="./" style="color:var(--accent,#2457c5);font-weight:600;text-decoration:none;align-self:flex-start">← All pages</a>
+  <header class="top">
+    <div><h1>Future Value of Annuities</h1><p>You get one try on each box. The page tells you if you are right or wrong, then you move on.</p></div>
+    <div class="stats" id="stats" aria-live="polite"></div>
+  </header>
+  <div class="card who">
+    <label for="sname">Your name</label>
+    <input id="sname" type="text" maxlength="60" autocomplete="name" placeholder="First and last name">
+    <span class="sync" id="sync" aria-live="polite">Your answers are sent to your teacher after every box.</span>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <section class="card">
+    <span class="qnum" id="qnum"></span>
+    <p class="prompt" id="prompt"></p>
+    <details>
+      <summary>How to type your answers</summary>
+      <p><b>Dollar amounts:</b> type the number, like <b>1234.56</b>. Don't round until the very last step, then round to the nearest cent.</p>
+      <p><b>Functions:</b> use <b>*</b> to multiply, <b>/</b> to divide, <b>^</b> for powers, and <b>x</b> for the variable. For example, <b>50*(1+0.02/12)^x</b> (this is only an example, not an answer). Keep rates as fractions like 0.02/12 instead of rounding them.</p>
+      <p><b>Reading a graph:</b> find where the curve crosses the dashed red line. A close estimate counts as right.</p>
+    </details>
+    <div id="rows"></div>
+  </section>
+</div>
+<script>
+(function () {
+  // ---------- teacher setup: Google Form link and field IDs ----------
+  var FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSecrPl8_aLcj3Zp2Gb51o2cpj2dHuaYWAEFMsAxPrTBkGpuGg/formResponse";
+  var F_NAME = "entry.163001036", F_SCORE = "entry.1785029471", F_ANS = "entry.1778186495";
+
+  // ---------- the three problems (worded for this page) ----------
+  // Future value of regular deposits: FV(x) = deposit * ((1 + i)^x - 1) / i, with i = rate / periods per year and x = number of periods.
+  function fv(P, i, x) { return P * (Math.pow(1 + i, x) - 1) / i; }
+  var I1 = 0.024 / 52, I2 = 0.015 / 4;
+  var PROBS = [
+    { id: 1, P: 100, i: I1, periods: 156, unit: "weeks", text: "Robbie opens a bank account with a $100 deposit. The account pays 2.4% annual interest, compounded weekly, and Robbie adds $100 every week for 3 years.",
+      parts: [
+        { k: "val", label: "How much is in the account after 3 years?", ans: fv(100, I1, 156), tol: 1 },
+        { k: "fn", label: "Write the future value function, where x is the number of weeks." },
+        { k: "est", label: "Use the graph to estimate the balance after 2 years.", ans: fv(100, I1, 104), rel: 0.03, mark: 104, markLabel: "2 years" }] },
+    { id: 2, P: 600, i: I2, periods: 20, unit: "quarters", text: "A customer deposits $600 into an account at the end of every quarter. The account earns 1.5% annual interest, compounded quarterly.",
+      parts: [
+        { k: "val", label: "What is the future value of the account after 5 years?", ans: fv(600, I2, 20), tol: 1 },
+        { k: "fn", label: "Write the future value function, where x is the number of quarters." },
+        { k: "est", label: "Use the graph to estimate the balance after 3 years.", ans: fv(600, I2, 12), rel: 0.03, mark: 12, markLabel: "3 years" }] },
+    { id: 3, text: "When Abram was born, his parents put $2,000 into an account that pays 1.2% annual interest, compounded semi-annually. They will give him the money on his 16th birthday.",
+      parts: [{ k: "val", label: "How much will Abram receive on his 16th birthday?", ans: 2000 * Math.pow(1 + 0.012 / 2, 32), tol: 1 }] }
+  ];
+  var N = PROBS.length;
+
+  // ---------- checking answers ----------
+  function parseMoney(raw) { var t = raw.replace(/[$,\s]/g, ""); return /^(\d+(\.\d*)?|\.\d+)$/.test(t) ? Number(t) : null; }
+  // Turns what the student typed into a function of x, or null if it is not a valid expression. No eval is used.
+  function parseFn(src) {
+    var t = src.toLowerCase().replace(/[−–]/g, "-").replace(/×/g, "*").replace(/÷/g, "/").replace(/\*\*/g, "^").replace(/[\s$,]/g, "");
+    if (t.indexOf("=") >= 0) { var p = t.split("="); if (p.length !== 2 || !/^[a-z]+(\(x\))?$/.test(p[0])) return null; t = p[1]; }
+    var toks = t.match(/\d+\.?\d*|\.\d+|x|[-+*\/^()]/g); if (!toks || toks.join("") !== t) return null;
+    var out = [], k, a, b;
+    for (k = 0; k < toks.length; k++) {
+      b = toks[k]; a = out[out.length - 1];
+      if (a !== undefined && (/^[\d.]/.test(a) || a === ")" || a === "x") && (/^[\d.]/.test(b) || b === "x" || b === "(")) out.push("*");
+      out.push(b);
+    }
+    var pos = 0;
+    function peek() { return out[pos]; }
+    function expr() { var v = term(), o; while (peek() === "+" || peek() === "-") { o = out[pos++]; v = bin(o, v, term()); } return v; }
+    function term() { var v = unary(), o; while (peek() === "*" || peek() === "/") { o = out[pos++]; v = bin(o, v, unary()); } return v; }
+    function unary() { if (peek() === "-") { pos++; var u = unary(); return function (x) { return -u(x); }; } if (peek() === "+") { pos++; return unary(); } return power(); }
+    function power() { var base = atom(); if (peek() === "^") { pos++; var e = unary(); return function (x) { return Math.pow(base(x), e(x)); }; } return base; }
+    function atom() {
+      var tk = out[pos++];
+      if (tk === undefined) throw 0;
+      if (tk === "x") return function (x) { return x; };
+      if (tk === "(") { var v = expr(); if (out[pos++] !== ")") throw 0; return v; }
+      if (/^[\d.]/.test(tk)) { var n = Number(tk); return function () { return n; }; }
+      throw 0;
+    }
+    function bin(o, l, r) { return function (x) { var a = l(x), b = r(x); return o === "+" ? a + b : o === "-" ? a - b : o === "*" ? a * b : a / b; }; }
+    try { var f = expr(); if (pos !== out.length) return null; return f; } catch (e) { return null; }
+  }
+  function checkFn(prob, raw) {
+    var f = parseFn(raw); if (!f) return false;
+    var xs = prob.id === 1 ? [4, 13, 26, 52, 104, 156] : [2, 4, 8, 12, 20];
+    return xs.every(function (x) { var a = f(x), b = fv(prob.P, prob.i, x); return isFinite(a) && Math.abs(a - b) <= 2e-4 * Math.abs(b); });
+  }
+  function ok(prob, part, raw) {
+    if (part.k === "fn") return checkFn(prob, raw);
+    var v = parseMoney(raw); if (v === null) return false;
+    return part.tol !== undefined ? Math.abs(v - part.ans) <= part.tol : Math.abs(v - part.ans) <= part.rel * part.ans;
+  }
+
+  // ---------- state ----------
+  var KEY = "futureValue.v1", state = { answers: {}, pos: 0, name: "" };
+  try { var raw = localStorage.getItem(KEY); if (raw) { var sv = JSON.parse(raw); if (sv && sv.answers) state = Object.assign(state, sv); } } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  var ui = { qid: null, focus: false };
+  function cur() { state.pos = Math.max(0, Math.min(N - 1, state.pos)); return PROBS[state.pos]; }
+  function ans(p) { return state.answers[p.id] || (state.answers[p.id] = { d: p.parts.map(function () { return 0; }), w: p.parts.map(function () { return 0; }), x: p.parts.map(function () { return ""; }) }); }
+  function complete(p) { var a = state.answers[p.id]; return !!a && a.d.indexOf(0) < 0; }
+  function totals() {
+    var done = 0, right = 0, steps = 0;
+    PROBS.forEach(function (p) { var a = state.answers[p.id]; if (!a) return; if (complete(p)) done++; a.d.forEach(function (d, i) { if (d) { steps++; if (a.w[i] === 0) right++; } }); });
+    return { done: done, right: right, steps: steps };
+  }
+
+  // ---------- drawing ----------
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function commas(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function graph(p, markAt, markLabel) {
+    var W = 520, H = 320, L = 84, R = 16, T = 26, B = 52, pw = W - L - R, ph = H - T - B, i, v, x, s;
+    var maxv = fv(p.P, p.i, p.periods), steps = [500, 1000, 2000, 2500, 5000, 10000, 20000], step = 20000;
+    for (i = 0; i < steps.length; i++) if (maxv / steps[i] <= 9) { step = steps[i]; break; }
+    var top = Math.ceil(maxv / step) * step;
+    function X(a) { return L + pw * a / p.periods; } function Y(b) { return T + ph * (1 - b / top); }
+    s = '<svg class="graph" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Graph of the future value function">';
+    for (v = 0; v <= top + 1e-9; v += step / 2) {
+      var major = Math.round(v / (step / 2)) % 2 === 0;
+      s += '<line class="gl' + (major ? "" : " minor") + '" x1="' + L + '" y1="' + Y(v).toFixed(1) + '" x2="' + (W - R) + '" y2="' + Y(v).toFixed(1) + '"/>';
+      if (major) s += '<text x="' + (L - 6) + '" y="' + (Y(v) + 4).toFixed(1) + '" text-anchor="end">$' + commas(v) + "</text>";
+    }
+    var xs = p.id === 1 ? 26 : 4;
+    for (x = 0; x <= p.periods; x += xs) s += '<line class="gl" x1="' + X(x).toFixed(1) + '" y1="' + T + '" x2="' + X(x).toFixed(1) + '" y2="' + (T + ph) + '"/><text x="' + X(x).toFixed(1) + '" y="' + (T + ph + 18) + '" text-anchor="middle">' + x + "</text>";
+    s += '<line class="ax" x1="' + L + '" y1="' + (T + ph) + '" x2="' + (W - R) + '" y2="' + (T + ph) + '"/><line class="ax" x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (T + ph) + '"/>';
+    var pts = []; for (x = 0; x <= p.periods; x++) pts.push(X(x).toFixed(1) + "," + Y(fv(p.P, p.i, x)).toFixed(1));
+    s += '<polyline class="curve" points="' + pts.join(" ") + '"/>';
+    s += '<line class="mark" x1="' + X(markAt).toFixed(1) + '" y1="' + T + '" x2="' + X(markAt).toFixed(1) + '" y2="' + (T + ph) + '"/><text class="mk" x="' + X(markAt).toFixed(1) + '" y="' + (T - 8) + '" text-anchor="middle">' + markLabel + " (x = " + markAt + ")</text>";
+    s += '<text x="' + (L + pw / 2) + '" y="' + (H - 5) + '" text-anchor="middle">x = number of ' + p.unit + '</text><text transform="translate(13 ' + (T + ph / 2) + ') rotate(-90)" text-anchor="middle">Balance ($)</text>';
+    return s + "</svg>";
+  }
+  function render() {
+    var p = cur(), a = ans(p); if (ui.qid !== p.id) ui.qid = p.id;
+    $("qnum").textContent = "Problem " + p.id + " of " + N; $("prompt").textContent = p.text;
+    var open = PROBS.findIndex(function (b) { return !complete(b); }); if (open < 0) open = N - 1;
+    $("tabs").innerHTML = PROBS.map(function (b, i) {
+      var x = state.answers[b.id], cls = "tab";
+      if (i === state.pos) cls += " on"; else if (complete(b)) cls += x.w.every(function (w) { return w === 0; }) ? " done" : " warn";
+      return '<button type="button" class="' + cls + '" data-pos="' + i + '"' + (i > open ? " disabled" : "") + ">Problem " + b.id + "</button>";
+    }).join("");
+    var fi = a.d.indexOf(0), h = "";
+    p.parts.forEach(function (part, i) {
+      var done = a.d[i], act = i === fi, letter = p.parts.length > 1 ? "abc"[i] + ". " : "";
+      if (part.k === "est" && a.d[i - 1]) h += '<div class="row"><b>The graph of the future value function</b>' + graph(p, part.mark, part.markLabel) + '<p class="cap">Find where the curve crosses the dashed red line.</p></div>';
+      h += '<div class="row' + (done || act ? "" : " off") + '"><label for="in' + i + '"><b>' + letter + "</b>" + part.label + "</label>";
+      if (done) h += a.w[i] === 0 ? '<div class="val">Right ✓</div>' : '<div class="val no">Wrong ✗ (you answered ' + esc(a.x[i]) + ")</div>";
+      else h += '<div class="inrow">' + (part.k !== "fn" ? '<span class="pre">$</span>' : "") + '<input id="in' + i + '" data-i="' + i + '" type="text" inputmode="' + (part.k === "fn" ? "text" : "decimal") + '" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="' + (part.k === "fn" ? "type your function" : "your answer") + '"' + (act ? "" : " disabled") + '><button type="button" class="btn go" data-i="' + i + '"' + (act ? "" : " disabled") + ">Submit</button></div>";
+      h += "</div>";
+    });
+    if (fi < 0) h += '<div class="done"><div class="fb good"><b>Problem finished.</b></div>' + (state.pos < N - 1 ? '<button type="button" class="btn" id="next">Next problem</button>' : "<p>You finished the assignment. Your answers have been sent to your teacher.</p>") + "</div>";
+    $("rows").innerHTML = h;
+    var inp = fi >= 0 && $("in" + fi); if (inp && ui.focus) inp.focus();
+    var t = totals();
+    $("stats").innerHTML = '<div class="stat"><b>' + t.done + " / " + N + '</b><span>Problems done</span></div><div class="stat"><b>' + t.right + " / " + t.steps + '</b><span>Right</span></div><div class="stat"><b>' + (t.steps ? Math.round(100 * t.right / t.steps) + "%" : "–") + "</b><span>Accuracy</span></div>";
+  }
+  function submit(i) {
+    var p = cur(), a = ans(p), inp = $("in" + i); if (!inp || !inp.value.trim() || a.d[i]) return;
+    if (!(state.name || "").trim()) { setSync("Type your name first, then answer."); nameEl.focus(); return; }
+    a.d[i] = 1; a.x[i] = inp.value.trim().slice(0, 60);
+    if (!ok(p, p.parts[i], inp.value)) a.w[i] = 1;
+    ui.focus = true; save(); render(); send();
+  }
+  function go(pos) { state.pos = pos; ui.qid = null; ui.focus = true; save(); render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  $("rows").addEventListener("click", function (e) {
+    var g = e.target.closest(".go"); if (g && !g.disabled) return submit(+g.dataset.i);
+    if (e.target.closest("#next")) go(state.pos + 1);
+  });
+  $("rows").addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.matches("input[data-i]")) { e.preventDefault(); submit(+e.target.dataset.i); } });
+  $("tabs").addEventListener("click", function (e) { var c = e.target.closest(".tab"); if (c && !c.disabled) go(+c.dataset.pos); });
+  render();
+
+  // ---------- results collection (Google Form) ----------
+  var syncEl = $("sync"), nameEl = $("sname");
+  nameEl.value = state.name || "";
+  // device code (random, not tied to identity) and active minutes, shown with each result
+  var DEV = (function () { try { var d = localStorage.getItem("deviceCode.v1"); if (!d) { d = Math.random().toString(16).slice(2, 8); localStorage.setItem("deviceCode.v1", d); } return d; } catch (e) { return "none"; } })();
+  var TKEY = KEY + ".sec", activeSec = 0, lastAct = Date.now();
+  try { activeSec = +localStorage.getItem(TKEY) || 0; } catch (e) {}
+  ["pointerdown", "keydown", "input"].forEach(function (ev) { window.addEventListener(ev, function () { lastAct = Date.now(); }, true); });
+  setInterval(function () { if (document.visibilityState === "visible" && Date.now() - lastAct < 60000) { activeSec++; if (activeSec % 10 === 0) { try { localStorage.setItem(TKEY, activeSec); } catch (e) {} } } }, 1000);
+  function extra() { try { localStorage.setItem(TKEY, activeSec); } catch (e) {} return " | device " + DEV + " | " + Math.round(activeSec / 60) + " min active"; }
+  function setSync(t) { syncEl.textContent = t; }
+  // "1:RWR 2:--- 3:-" = problem number, then one letter per box. R = right, W = wrong, - = not answered yet.
+  function answersString() {
+    return PROBS.map(function (p) { var a = state.answers[p.id]; return p.id + ":" + p.parts.map(function (_, i) { return !a || !a.d[i] ? "-" : a.w[i] === 0 ? "R" : "W"; }).join(""); }).join(" ");
+  }
+  var sending = 0;
+  function send() {
+    var name = (state.name || "").trim(); if (!name) return;
+    var t = totals(); if (t.steps === 0) return;
+    var body = new URLSearchParams();
+    body.set(F_NAME, name); body.set(F_SCORE, t.right + " right of " + t.steps + " boxes (" + t.done + " of " + N + " problems finished)" + extra()); body.set(F_ANS, answersString());
+    sending++; setSync("Sending…");
+    fetch(FORM_URL, { method: "POST", mode: "no-cors", body: body }).then(function () {
+      if (--sending === 0) setSync("Sent to your teacher at " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + ".");
+    }, function () { sending--; setSync("Could not send. Check your internet. Your next answer will send everything again."); });
+  }
+  nameEl.addEventListener("input", function () { state.name = nameEl.value; save(); });
+})();
+</script>
+</body>
+</html>
